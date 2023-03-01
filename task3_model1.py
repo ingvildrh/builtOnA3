@@ -2,7 +2,7 @@ import pathlib
 import matplotlib.pyplot as plt
 import utils
 from torch import nn
-from dataloaders import load_cifar10
+#from dataloaders import load_cifar10
 from trainer3a import Trainer3, compute_loss_and_accuracy
 
 
@@ -20,7 +20,8 @@ class Model1(nn.Module):
         super().__init__()
 
         # Task 2a - Initialize the neural network
-        num_filters = [32, 64, 128]  # Set number of filters in first conv layer
+        num_filters = [32, 64, 128]  # Set number of filters in first conv layer, 32 is the number of filters in the first convolutional layer, 
+        #64 is for the second, 128 or the third
         self.num_classes = num_classes
 
         # Defining the neural network
@@ -41,12 +42,12 @@ class Model1(nn.Module):
             # Second convolutional layer
             nn.Conv2d(
                 in_channels=num_filters[0],
-                out_channels=num_filters[1],
+                out_channels=num_filters[0],#har regnet at dette er 32 men de setter den til 64
                 kernel_size=5,
                 stride=1,
                 padding=2
             ),
-            nn.BatchNorm2d(num_filters[1]),
+            nn.BatchNorm2d(num_filters[0]),
             nn.Hardswish(inplace=True), #TODO inplace=true
 
             # Second max pool
@@ -54,13 +55,13 @@ class Model1(nn.Module):
 
             # Third convolutional layer
             nn.Conv2d(
-                in_channels=num_filters[1],
-                out_channels=num_filters[2],
+                in_channels=num_filters[0],
+                out_channels=num_filters[0],
                 kernel_size=5,
                 stride=1,
                 padding=2
             ),
-            nn.BatchNorm2d(num_filters[2]),
+            nn.BatchNorm2d(num_filters[0]),
             nn.Hardswish(inplace=True), #TODO inplace=true
 
             # Third max pool
@@ -75,7 +76,7 @@ class Model1(nn.Module):
         # There is no need for softmax activation function, as this is
         # included with nn.CrossEntropyLoss
         self.classifier = nn.Sequential(
-            nn.Linear(4*4*128, 64),
+            nn.Linear(32*32*32, 64),
             nn.BatchNorm1d(64),
             nn.ReLU(inplace=True),
             nn.Linear(64, num_classes),

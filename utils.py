@@ -26,11 +26,14 @@ def to_cuda(elements):
     elements can be a object or list/tuple of objects
     """
     if torch.cuda.is_available():
-        #print("cuda available")
         if type(elements) == tuple or type(elements) == list:
+            #return [x.cuda() if isinstance(x, torch.Tensor) else x for x in elements]
             return [x.cuda() for x in elements]
-        return elements.cuda()
+        return elements.cuda() #if isinstance(elements, torch.Tensor) else elements
+            #return [x.cuda() for x in elements]
+        #return elements.cuda()
     return elements
+    
 
 
 def save_checkpoint(state_dict: dict,
@@ -85,7 +88,7 @@ def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_var
     global_steps = list(loss_dict.keys())
     loss = list(loss_dict.values())
     if npoints_to_average == 1 or not plot_variance:
-        plt.plot(global_steps, loss, label=label)
+        plt.plot(global_steps, [l.cpu().numpy() for l in loss], label=label)
         return
 
     npoints_to_average = 10
@@ -99,7 +102,7 @@ def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_var
         mean_loss.append(np.mean(points))
         loss_std.append(np.std(points))
         steps.append(step)
-    plt.plot(steps, mean_loss,
+    plt.plot(steps, [l.cpu().numpy() for l in mean_loss],
              label=f"{label} (mean over {npoints_to_average} steps)")
     plt.fill_between(
         steps, np.array(mean_loss) -

@@ -16,7 +16,8 @@ def create_plots(trainer: Trainer, name: str):
     plt.legend()
     plt.subplot(1, 2, 2)
     plt.title("Accuracy")
-    utils.plot_loss(trainer.validation_history["accuracy"], label="Validation Accuracy")
+    #her er problemet som rammes av cpu/gpu feil
+    utils.plot_loss(trainer.validation_history["accuracy"].cpu(), label="Validation Accuracy")
     plt.legend()
     plt.savefig(plot_path.joinpath(f"{name}.png"))
     plt.show()

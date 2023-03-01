@@ -73,6 +73,14 @@ def create_dataloaders(dataset, batch_size):
 
     return dataloader_train, dataloader_val, dataloader_test
 
+def generate_class_dict(data):
+    class_lst = data.classes
+    keys = range(0, len(class_lst))
+    class_dict = {key: None for key in keys}
+    for i in range(len(class_lst)):
+        class_dict[i] = class_lst[i]
+    return class_dict
 
-data = get_data(1, transform)
-train_dataloader, val_dataloader, test_dataloader = create_dataloaders(data, 32)
+def count_classes(dataset):
+    print("Your classes are: ", dataset.classes)
+    return len(dataset.classes)
