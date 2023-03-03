@@ -82,14 +82,14 @@ class Trainer:
         self.model = utils.to_cuda(self.model)
         print(self.model)
 
-        # Define our optimizer. SGD = Stochastich Gradient Descent
+        # Define our optimizer. SGD = Stochastich Gradient Descent kan også evt. bruke Adam
         self.optimizer = torch.optim.SGD(self.model.parameters(),
                                          self.learning_rate)
 
         # Load our dataset
         self.dataloader_train, self.dataloader_val, self.dataloader_test = dataloaders
 
-        # Validate our model everytime we pass through 50% of the dataset
+        # Validate our model everytime we pass through 50% of the dataset, can change to 25% by dividing by 4
         self.num_steps_per_val = len(self.dataloader_train) // 2
         self.global_step = 0
         self.start_time = time.time()
@@ -112,11 +112,16 @@ class Trainer:
             Train, validation and test.
         """
         self.model.eval()
-        validation_loss, validation_acc = compute_loss_and_accuracy(
-            self.dataloader_val, self.model, self.loss_criterion
-        )
+
+        training_loss, training_acc = compute_loss_and_accuracy(self.dataloader_train, self.model, self.loss_criterion)
+        self.train_history["accuracy"][self.global_step] = training_acc
+
+    
+        validation_loss, validation_acc = compute_loss_and_accuracy(self.dataloader_val, self.model, self.loss_criterion)
         self.validation_history["loss"][self.global_step] = validation_loss
         self.validation_history["accuracy"][self.global_step] = validation_acc
+
+
         used_time = time.time() - self.start_time
         print(
             f"Epoch: {self.epoch:>1}",
@@ -227,4 +232,4 @@ class Trainer:
 
     def save_model_test(self):
         PATH = "model.pt"
-        torch.save(self, PATH)
+        torch.save(self.state_dict(), PATH)

@@ -2,6 +2,7 @@ import pathlib
 import matplotlib.pyplot as plt
 import utils
 from torch import nn
+import torch
 #from dataloaders import load_cifar10
 from trainer3a import Trainer3, compute_loss_and_accuracy
 
@@ -102,6 +103,9 @@ class Model1(nn.Module):
         assert out.shape == (batch_size, self.num_classes),\
             f"Expected output of forward pass to be: {expected_shape}, but got: {out.shape}"
         return out
+    
+    def save_model(self, PATH):
+        torch.save(self.state_dict(), PATH)
 
 
 def create_plots(trainer: Trainer3, name: str):
