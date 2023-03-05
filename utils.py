@@ -82,8 +82,13 @@ def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_var
         label: a string to use as label in plot legend
         npoints_to_average: Number of points to average plot
     """
+    print(loss_dict)
     global_steps = list(loss_dict.keys())
     loss = list(loss_dict.values())
+    #print(type(global_steps))
+    #print(type(loss))
+    print(global_steps)
+    print(loss)
     if npoints_to_average == 1 or not plot_variance:
         plt.plot(global_steps, loss, label=label)
         return

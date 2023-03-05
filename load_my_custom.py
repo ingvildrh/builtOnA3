@@ -42,18 +42,24 @@ def get_data(LOCAL, transform):
 def create_dataloaders(dataset, batch_size):
     #Splitting the dataset into random subsets for training, validation and testing
     train_size = int(0.8 * len(dataset))
-    val_size = test_size = (len(dataset) - train_size) // 2
+    test_size = (len(dataset) - train_size) // 2
+    val_size = test_size
     train_data, val_data, test_data = random_split(dataset, [train_size, val_size, test_size])
     
     
     indices = list(range(len(train_data)))
-    split_idx = int(np.floor(0.8 * len(train_data)))
+    split_idx = int(np.floor(0.1 * len(train_data)))
 
     val_indices = np.random.choice(indices, size=split_idx, replace=False)
     train_indices = list(set(indices) - set(val_indices))
 
     train_sampler = SubsetRandomSampler(train_indices)
     validation_sampler = SubsetRandomSampler(val_indices)
+
+    print("Training:", len(train_data))
+    print("Testing:", len(test_data))
+    print("Validation:", len(val_data))
+
 
     dataloader_train = torch.utils.data.DataLoader(train_data,
                                                    sampler=train_sampler,
@@ -84,3 +90,46 @@ def generate_class_dict(data):
 def count_classes(dataset):
     print("Your classes are: ", dataset.classes)
     return len(dataset.classes)
+
+
+def main():
+    keys = range(0, 9)
+    class_distribution = {key: None for key in keys}
+    for key in class_distribution:
+        class_distribution[key] = 0
+    print(class_distribution)
+
+    keys = range(0, 9)
+    class_distribution1 = {key: None for key in keys}
+    for key in class_distribution1:
+        class_distribution1[key] = 0
+    print(class_distribution1)
+
+    keys = range(0, 9)
+    class_distribution2 = {key: None for key in keys}
+    for key in class_distribution2:
+        class_distribution2[key] = 0
+    print(class_distribution2)
+
+    data = get_data(1, transform)
+    di = generate_class_dict(data)
+    print(di)
+    print(count_classes(data))
+    dataloader_train, dataloader_val, dataloader_test = create_dataloaders(data, 32)
+
+    print("the length of trainloader: ", len(dataloader_train))
+    d = see_dist(dataloader_train, class_distribution)
+    print(d)
+   
+    print("the length of testloader: ", len(dataloader_test))
+    c = see_dist(dataloader_test, class_distribution1)
+    print(c)
+
+    print("the length of valloader: ", len(dataloader_val))
+    e = see_dist(dataloader_val, class_distribution2)
+    print(e)
+
+
+    
+if __name__ == "__main__":
+    main()
