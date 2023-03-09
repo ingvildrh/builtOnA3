@@ -2,6 +2,7 @@ import pathlib
 import matplotlib.pyplot as plt
 import utils
 from torch import nn
+import torch
 from trainer import Trainer, compute_loss_and_accuracy
 
 def create_plots(trainer: Trainer, name: str):
@@ -12,7 +13,18 @@ def create_plots(trainer: Trainer, name: str):
     plt.subplot(1, 2, 1)
     plt.title("Cross Entropy Loss")
     utils.plot_loss(trainer.train_history["loss"], label="Training loss", npoints_to_average=10)
-    utils.plot_loss(trainer.validation_history["loss"], label="Validation loss")
+    #Added this part to change the data from tensor : gpu to cpu for plotting
+    if torch.cuda.is_available():
+        d1 = trainer.validation_history
+        for key in d1['loss']:
+            if isinstance(d1['loss'][key], torch.Tensor):
+                d1['loss'][key] = d1['loss'][key].item()
+        for key in d1['accuracy']:
+            d1['accuracy'][key] = float(d1['accuracy'][key])
+        
+        utils.plot_loss(trainer.validation_history["loss"], label="Validation loss", npoints_to_average=1) #prøve npoints_to_average=10
+    else:
+        utils.plot_loss(trainer.validation_history["loss"], label="Validation loss", npoints_to_average=1) #prøve npoints_to_average=10
     plt.legend()
     plt.subplot(1, 2, 2)
     plt.title("Accuracy")

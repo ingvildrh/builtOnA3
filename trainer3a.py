@@ -108,11 +108,13 @@ class Trainer3:
             Train, validation and test.
         """
         self.model.eval()
-        validation_loss, validation_acc = compute_loss_and_accuracy(
-            self.dataloader_val, self.model, self.loss_criterion
-        )
+        raining_loss, training_acc = compute_loss_and_accuracy(self.dataloader_train, self.model, self.loss_criterion)
+        self.train_history["accuracy"][self.global_step] = training_acc
+
+        validation_loss, validation_acc = compute_loss_and_accuracy(self.dataloader_val, self.model, self.loss_criterion)
         self.validation_history["loss"][self.global_step] = validation_loss
         self.validation_history["accuracy"][self.global_step] = validation_acc
+
         used_time = time.time() - self.start_time
         print(
             f"Epoch: {self.epoch:>1}",
@@ -120,6 +122,7 @@ class Trainer3:
             f"Global step: {self.global_step:>6}",
             f"Validation Loss: {validation_loss:.2f}",
             f"Validation Accuracy: {validation_acc:.3f}",
+            f"Train Accuracy: {training_acc:.3f}",
             sep=", ")
         self.model.train()
 
@@ -216,3 +219,6 @@ class Trainer3:
                 f"Could not load best checkpoint. Did not find under: {self.checkpoint_dir}")
             return
         self.model.load_state_dict(state_dict)
+
+    def save_model1(self):
+        torch.save(self, "mymodel.pt")
