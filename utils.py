@@ -1,109 +1,93 @@
 import torch
-import matplotlib.pyplot as plt
-import numpy as np
-import pathlib
-import random
+import torchvision
+from dataset import FishDataset
+from torch.utils.data import DataLoader
 
-# Allow torch/cudnn to optimize/analyze the input/output shape of convolutions
-# To optimize forward/backward pass.
-# This will increase model throughput for fixed input shape to the network
-torch.backends.cudnn.benchmark = True
+def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
+    print("=> Saving checkpoint")
+    torch.save(state, filename)
 
-# Cudnn is not deterministic by default. Set this to True if you want
-# to be sure to reproduce your results
-torch.backends.cudnn.deterministic = True
+def load_checkpoint(checkpoint, model):
+    print("=> Loading checkpoint")
+    model.load_state_dict(checkpoint["state_dict"])
 
+def get_loaders(
+    train_dir,
+    train_maskdir,
+    val_dir,
+    val_maskdir,
+    batch_size,
+    train_transform,
+    val_transform,
+    num_workers=4,
+    pin_memory=True,
+):
+    train_ds = CarvanaDataset(
+        image_dir=train_dir,
+        mask_dir=train_maskdir,
+        transform=train_transform,
+    )
 
-def set_seed(seed: int):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=True,
+    )
 
+    val_ds = CarvanaDataset(
+        image_dir=val_dir,
+        mask_dir=val_maskdir,
+        transform=val_transform,
+    )
 
-def to_cuda(elements):
-    """
-    Transfers every object in elements to GPU VRAM if available.
-    elements can be a object or list/tuple of objects
-    """
-    if torch.cuda.is_available():
-        if type(elements) == tuple or type(elements) == list:
-            return [x.cuda() for x in elements]
-        return elements.cuda() 
-    return elements
-    
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=False,
+    )
 
+    return train_loader, val_loader
 
-def save_checkpoint(state_dict: dict,
-                    filepath: pathlib.Path,
-                    is_best: bool,
-                    max_keep: int = 1):
-    """
-    Saves state_dict to filepath. Deletes old checkpoints as time passes.
-    If is_best is toggled, saves a checkpoint to best.ckpt
-    """
-    filepath.parent.mkdir(exist_ok=True, parents=True)
-    list_path = filepath.parent.joinpath("latest_checkpoint")
-    torch.save(state_dict, filepath)
-    if is_best:
-        torch.save(state_dict, filepath.parent.joinpath("best.ckpt"))
-    previous_checkpoints = get_previous_checkpoints(filepath.parent)
-    if filepath.name not in previous_checkpoints:
-        previous_checkpoints = [filepath.name] + previous_checkpoints
-    if len(previous_checkpoints) > max_keep:
-        for ckpt in previous_checkpoints[max_keep:]:
-            path = filepath.parent.joinpath(ckpt)
-            if path.exists():
-                path.unlink()
-    previous_checkpoints = previous_checkpoints[:max_keep]
-    with open(list_path, 'w') as fp:
-        fp.write("\n".join(previous_checkpoints))
+def check_accuracy(loader, model, device="cuda"):
+    num_correct = 0
+    num_pixels = 0
+    dice_score = 0
+    model.eval()
 
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device).unsqueeze(1)
+            preds = torch.sigmoid(model(x))
+            preds = (preds > 0.5).float()
+            num_correct += (preds == y).sum()
+            num_pixels += torch.numel(preds)
+            dice_score += (2 * (preds * y).sum()) / (
+                (preds + y).sum() + 1e-8
+            )
 
-def get_previous_checkpoints(directory: pathlib.Path) -> list:
-    assert directory.is_dir()
-    list_path = directory.joinpath("latest_checkpoint")
-    list_path.touch(exist_ok=True)
-    with open(list_path) as fp:
-        ckpt_list = fp.readlines()
-    return [_.strip() for _ in ckpt_list]
+    print(
+        f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
+    )
+    print(f"Dice score: {dice_score/len(loader)}")
+    model.train()
 
+def save_predictions_as_imgs(
+    loader, model, folder="saved_images/", device="cuda"
+):
+    model.eval()
+    for idx, (x, y) in enumerate(loader):
+        x = x.to(device=device)
+        with torch.no_grad():
+            preds = torch.sigmoid(model(x))
+            preds = (preds > 0.5).float()
+        torchvision.utils.save_image(
+            preds, f"{folder}/pred_{idx}.png"
+        )
+        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
 
-def load_best_checkpoint(directory: pathlib.Path):
-    filepath = directory.joinpath("best.ckpt")
-    if not filepath.is_file():
-        return None
-    return torch.load(directory.joinpath("best.ckpt"))
-
-
-def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_variance=True):
-    """
-    Args:
-        loss_dict: a dictionary where keys are the global step and values are the given loss / accuracy
-        label: a string to use as label in plot legend
-        npoints_to_average: Number of points to average plot
-    """
-    global_steps = list(loss_dict.keys())
-    loss = list(loss_dict.values())
-    if npoints_to_average == 1 or not plot_variance:
-
-        plt.plot(global_steps, loss, label=label)
-        return
-
-    npoints_to_average = 10
-    num_points = len(loss) // npoints_to_average
-    mean_loss = []
-    loss_std = []
-    steps = []
-    for i in range(num_points):
-        points = loss[i*npoints_to_average:(i+1)*npoints_to_average]
-        step = global_steps[i*npoints_to_average + npoints_to_average//2]
-        mean_loss.append(np.mean(points))
-        loss_std.append(np.std(points))
-        steps.append(step)
-    plt.plot(steps, mean_loss,
-             label=f"{label} (mean over {npoints_to_average} steps)")
-    plt.fill_between(
-        steps, np.array(mean_loss) -
-        np.array(loss_std), np.array(mean_loss) + loss_std,
-        alpha=.2, label=f"{label} variance over {npoints_to_average} steps")
-
+    model.train()
