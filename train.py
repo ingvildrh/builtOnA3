@@ -17,12 +17,12 @@ from utils import (
 LEARNING_RATE = 1e-4
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 16
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 NUM_WORKERS = 2
 IMAGE_HEIGHT = 160  # 1280 originally
 IMAGE_WIDTH = 240  # 1918 originally
 PIN_MEMORY = True
-LOAD_MODEL = False
+LOAD_MODEL = True
 TRAIN_IMG_DIR = "C:/Users/ingvilrh/OneDrive - NTNU/Masteroppgave23/fishForUNETtut/train_images/"
 TRAIN_MASK_DIR = "C:/Users/ingvilrh/OneDrive - NTNU/Masteroppgave23/fishForUNETtut/train_masks/"
 VAL_IMG_DIR = "C:/Users/ingvilrh/OneDrive - NTNU/Masteroppgave23/fishForUNETtut/val_images/"
@@ -38,6 +38,10 @@ def train_fn(loader, model, optimizer, loss_fn, scaler):
         # forward
         with torch.cuda.amp.autocast():
             predictions = model(data)
+            targets = targets.view(-1, 160, 240)
+
+            targets = targets.to(torch.long)
+
             loss = loss_fn(predictions, targets)
 
         # backward
@@ -79,8 +83,8 @@ def main():
         ],
     )
 
-    model = UNET(in_channels=3, out_channels=1).to(DEVICE)
-    loss_fn = nn.BCEWithLogitsLoss()
+    model = UNET(in_channels=3, out_channels=3).to(DEVICE)
+    loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     train_loader, val_loader = get_loaders(
@@ -103,6 +107,7 @@ def main():
     scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(NUM_EPOCHS):
+        print("Epoch:", epoch)
         train_fn(train_loader, model, optimizer, loss_fn, scaler)
 
         # save model
